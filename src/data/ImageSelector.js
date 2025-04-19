@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { FaImage } from "react-icons/fa";
+import { uploadImageToStorage } from "../service/api/uploadImage";
+
+// Import semua assets
 import img1 from "../assets/Type=22.png";
 import img2 from "../assets/Type=11.png";
 import img3 from "../assets/Type=21.png";
@@ -36,6 +39,7 @@ import img33 from "../assets/Type=22.png";
 import img34 from "../assets/image 227.png";
 import img35 from "../assets/Number=17.png";
 import img36 from "../assets/Type=1.png";
+
 const availableImages = [
   img1,
   img2,
@@ -77,22 +81,40 @@ const availableImages = [
 
 const ImageSelector = ({ value, onChange, label }) => {
   const [showModal, setShowModal] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      setUploading(true);
+      const url = await uploadImageToStorage(file);
+      onChange(url);
+      setShowModal(false);
+    } catch (error) {
+      console.error("Upload failed:", error);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
     <div className="mb-4">
       <label className="block text-gray-700 mb-2">{label}</label>
-      <div className="flex">
+      <div className="flex items-center">
         <input
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="w-full px-3 py-2 border rounded"
-          placeholder="Pilih gambar dari assets"
+          placeholder="Select or upload an image"
         />
         <button
           type="button"
           onClick={() => setShowModal(true)}
           className="ml-2 bg-gray-200 hover:bg-gray-300 px-3 py-2 rounded"
+          title="Select from Assets"
         >
           <FaImage />
         </button>
@@ -101,7 +123,21 @@ const ImageSelector = ({ value, onChange, label }) => {
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg max-w-4xl max-h-[80vh] overflow-auto">
-            <h3 className="text-xl font-bold mb-4">Pilih Gambar</h3>
+            <h3 className="text-xl font-bold mb-4">Select or Upload Image</h3>
+
+            <div className="mb-6">
+              <label className="block mb-2 font-medium">Upload New Image</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileUpload}
+                disabled={uploading}
+              />
+              {uploading && (
+                <p className="text-sm text-gray-500 mt-1">Uploading...</p>
+              )}
+            </div>
+
             <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {availableImages.map((imgPath, index) => (
                 <div
@@ -118,23 +154,17 @@ const ImageSelector = ({ value, onChange, label }) => {
                     src={imgPath}
                     alt="Preview"
                     className="object-contain"
-                    style={{
-                      width: "auto",
-                      height: "150px",
-                    }}
-                    onError={(e) => {
-                      e.target.src = "https://via.placeholder.com/100";
-                    }}
+                    style={{ width: "auto", height: "150px" }}
                   />
-                  <div className="text-xs truncate mt-1">{imgPath}</div>
                 </div>
               ))}
             </div>
+
             <button
               onClick={() => setShowModal(false)}
               className="mt-4 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
             >
-              Tutup
+              Close
             </button>
           </div>
         </div>

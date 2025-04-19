@@ -1,4 +1,6 @@
+// src/pages/Index.js
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Header from "../components/landingpage/header";
 import { Nav } from "../components/landingpage/nav";
 import Profile from "../components/landingpage/profile";
@@ -7,30 +9,56 @@ import { CardSlider } from "../components/landingpage/card";
 import Footer from "../components/landingpage/footer";
 import hero from "../assets/herosection.png";
 import logoKecil from "../assets/logokecil.png";
-import { navItems, profileData, cards, footerData } from "../data/movieData";
+import { navItems, profileData, footerData } from "../data/movieData";
+import {
+  getMovies,
+  createMovie,
+  updateMovie,
+  deleteMovie,
+} from "../service/api/firestoreCrud";
 
 function Index() {
+  const navigate = useNavigate();
   const [isMuted, setIsMuted] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [topRating, setTopRating] = useState([]);
   const [trending, setTrending] = useState([]);
   const [newRelease, setNewRelease] = useState([]);
   const [daftarSaya, setDaftarSaya] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const adminStatus = localStorage.getItem("isAdmin") === "true";
     setIsAdmin(adminStatus);
 
-    const savedMovies = JSON.parse(localStorage.getItem("movieData"));
-    const savedDaftarSaya =
-      JSON.parse(localStorage.getItem("daftarSaya")) || [];
+    const fetchAllMovies = async () => {
+      try {
+        setLoading(true);
+        const [topRatingData, trendingData, newReleaseData] = await Promise.all(
+          [
+            getMovies("topRating"),
+            getMovies("trending"),
+            getMovies("newRelease"),
+          ]
+        );
 
+        setTopRating(topRatingData);
+        setTrending(trendingData);
+        setNewRelease(newReleaseData);
+      } catch (error) {
+        console.error("Failed to fetch movies:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAllMovies();
+
+    // Load saved movies from localStorage
+    const savedMovies = localStorage.getItem("daftarSaya");
     if (savedMovies) {
-      setTopRating(savedMovies.topRating || []);
-      setTrending(savedMovies.trending || []);
-      setNewRelease(savedMovies.newRelease || []);
+      setDaftarSaya(JSON.parse(savedMovies));
     }
-    setDaftarSaya(savedDaftarSaya);
   }, []);
 
   useEffect(() => {
@@ -56,7 +84,6 @@ function Index() {
       ];
 
       setDaftarSaya(newDaftarSaya);
-      localStorage.setItem("daftarSaya", JSON.stringify(newDaftarSaya));
       alert(`${card.title} telah ditambahkan ke Daftar Saya`);
     } else {
       alert(`${card.title} sudah ada di Daftar Saya`);
@@ -107,99 +134,107 @@ function Index() {
         bgExtended={true}
       />
 
-      <section className="py-10 px-4 sm:px-8 md:px-16 lg:px-32 bg-[#181A1C]">
-        <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-8 text-left">
-          Melanjutkan Nonton Film
-        </h2>
-        <div className="w-full overflow-hidden">
-          <CardSlider
-            cards={cards}
-            showBadges={true}
-            isContinueWatching={true}
-            initialVisibleCards={4}
-            visibleCards={5}
-            onAddToDaftarSaya={handleAddToDaftarSaya}
-          />
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-white text-xl">Loading movies...</div>
         </div>
-      </section>
+      ) : (
+        <>
+          <section className="py-10 px-4 sm:px-8 md:px-16 lg:px-32 bg-[#181A1C]">
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-8 text-left">
+              Melanjutkan Nonton Film
+            </h2>
+            <div className="w-full overflow-hidden">
+              <CardSlider
+                cards={trending}
+                showBadges={true}
+                isContinueWatching={true}
+                initialVisibleCards={4}
+                visibleCards={5}
+                onAddToDaftarSaya={handleAddToDaftarSaya}
+              />
+            </div>
+          </section>
 
-      <section className="py-6 sm:py-10 px-4 sm:px-8 md:px-16 lg:px-32 bg-[#181A1C]">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white">
-            Top Rating Film dan Series Hari Ini
-          </h2>
-          {isAdmin && (
-            <a
-              href="/admin/movies?tab=topRating"
-              className="text-blue-500 hover:underline text-sm"
-            >
-              Manage
-            </a>
-          )}
-        </div>
-        <div className="w-full overflow-hidden">
-          <CardSlider
-            cards={topRating}
-            cardClassName="max-w-[180px] sm:max-w-[280px]"
-            showArrows={true}
-            showBadges={true}
-            imageHeight="400px"
-            onAddToDaftarSaya={handleAddToDaftarSaya}
-          />
-        </div>
-      </section>
+          <section className="py-6 sm:py-10 px-4 sm:px-8 md:px-16 lg:px-32 bg-[#181A1C]">
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white">
+                Top Rating Film dan Series Hari Ini
+              </h2>
+              {isAdmin && (
+                <button
+                  onClick={() => navigate("/admin/movies?tab=topRating")}
+                  className="text-blue-500 hover:underline text-sm"
+                >
+                  Manage
+                </button>
+              )}
+            </div>
+            <div className="w-full overflow-hidden">
+              <CardSlider
+                cards={topRating}
+                cardClassName="max-w-[180px] sm:max-w-[280px]"
+                showArrows={true}
+                showBadges={true}
+                imageHeight="400px"
+                onAddToDaftarSaya={handleAddToDaftarSaya}
+              />
+            </div>
+          </section>
 
-      <section className="py-6 sm:py-10 px-4 sm:px-8 md:px-16 lg:px-32 bg-[#181A1C]">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white">
-            Film Trending
-          </h2>
-          {isAdmin && (
-            <a
-              href="/admin/movies?tab=trending"
-              className="text-blue-500 hover:underline text-sm"
-            >
-              Manage
-            </a>
-          )}
-        </div>
-        <div className="w-full overflow-hidden">
-          <CardSlider
-            cards={trending}
-            cardClassName="max-w-[180px] sm:max-w-[280px]"
-            showArrows={true}
-            showBadges={true}
-            imageHeight="400px"
-            onAddToDaftarSaya={handleAddToDaftarSaya}
-          />
-        </div>
-      </section>
+          <section className="py-6 sm:py-10 px-4 sm:px-8 md:px-16 lg:px-32 bg-[#181A1C]">
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white">
+                Film Trending
+              </h2>
+              {isAdmin && (
+                <button
+                  onClick={() => navigate("/admin/movies?tab=trending")}
+                  className="text-blue-500 hover:underline text-sm"
+                >
+                  Manage
+                </button>
+              )}
+            </div>
+            <div className="w-full overflow-hidden">
+              <CardSlider
+                cards={trending}
+                cardClassName="max-w-[180px] sm:max-w-[280px]"
+                showArrows={true}
+                showBadges={true}
+                imageHeight="400px"
+                onAddToDaftarSaya={handleAddToDaftarSaya}
+              />
+            </div>
+          </section>
 
-      <section className="py-6 sm:py-10 px-4 sm:px-8 md:px-16 lg:px-32 bg-[#181A1C]">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white">
-            Rilis Baru
-          </h2>
-          {isAdmin && (
-            <a
-              href="/admin/movies?tab=newRelease"
-              className="text-blue-500 hover:underline text-sm"
-            >
-              Manage
-            </a>
-          )}
-        </div>
-        <div className="w-full overflow-hidden">
-          <CardSlider
-            cards={newRelease}
-            cardClassName="max-w-[180px] sm:max-w-[280px]"
-            showArrows={true}
-            showBadges={true}
-            imageHeight="400px"
-            onAddToDaftarSaya={handleAddToDaftarSaya}
-          />
-        </div>
-      </section>
+          <section className="py-6 sm:py-10 px-4 sm:px-8 md:px-16 lg:px-32 bg-[#181A1C]">
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white">
+                Rilis Baru
+              </h2>
+              {isAdmin && (
+                <button
+                  onClick={() => navigate("/admin/movies?tab=newRelease")}
+                  className="text-blue-500 hover:underline text-sm"
+                >
+                  Manage
+                </button>
+              )}
+            </div>
+            <div className="w-full overflow-hidden">
+              <CardSlider
+                cards={newRelease}
+                cardClassName="max-w-[180px] sm:max-w-[280px]"
+                showArrows={true}
+                showBadges={true}
+                imageHeight="400px"
+                onAddToDaftarSaya={handleAddToDaftarSaya}
+              />
+            </div>
+          </section>
+        </>
+      )}
 
       <Footer
         logo={footerData.logo}
