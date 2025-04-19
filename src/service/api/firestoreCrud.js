@@ -87,30 +87,34 @@ const createMovie = async (collectionName, movieData) => {
 
 const updateMovie = async (collectionName, docId, movieData) => {
   try {
-    const updateMask = {
-      fieldPaths: Object.keys(movieData),
-    };
+    if (!docId) throw new Error("Document ID is required");
+
+    // Create updateMask with all field paths
+    const fieldPaths = Object.keys(movieData).filter(
+      (key) => movieData[key] !== undefined
+    );
 
     const response = await fetch(
-      `${FIRESTORE_BASE_URL}/${collectionName}/${docId}`,
+      `${FIRESTORE_BASE_URL}/${collectionName}/${docId}?updateMask.fieldPaths=${fieldPaths.join(
+        "&updateMask.fieldPaths="
+      )}`,
       {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          ...formatForFirestore(movieData),
-          updateMask,
-        }),
+        body: JSON.stringify(formatForFirestore(movieData)),
       }
     );
 
-    if (!response.ok) throw new Error("Failed to update movie");
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Failed to update movie: ${JSON.stringify(errorData)}`);
+    }
 
-    const data = await response.json();
-    return parseFromFirestore(data);
+    return await response.json();
   } catch (error) {
-    console.error("Error updating movie:", error);
+    console.error("Update error:", error);
     throw error;
   }
 };

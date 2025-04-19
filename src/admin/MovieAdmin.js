@@ -78,11 +78,14 @@ const MovieAdmin = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log("Submitting form data:", formData); // Debug log
     try {
       setLoading(true);
       if (editingId) {
+        console.log("Updating movie with ID:", editingId); // Debug log
         await updateMovie(activeTab, editingId, formData);
       } else {
+        console.log("Creating new movie"); // Debug log
         await createMovie(activeTab, formData);
       }
       await fetchMovies();
@@ -97,9 +100,11 @@ const MovieAdmin = () => {
 
   const handleEdit = (movie) => {
     setEditingId(movie.id);
-    setFormData(movie);
+    setFormData({
+      ...initialFormState, // Start with default values
+      ...movie, // Override with movie data
+    });
   };
-
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this movie?")) {
       try {

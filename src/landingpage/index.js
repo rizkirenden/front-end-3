@@ -1,4 +1,3 @@
-// src/pages/Index.js
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../components/landingpage/header";
@@ -9,13 +8,8 @@ import { CardSlider } from "../components/landingpage/card";
 import Footer from "../components/landingpage/footer";
 import hero from "../assets/herosection.png";
 import logoKecil from "../assets/logokecil.png";
-import { navItems, profileData, footerData } from "../data/movieData";
-import {
-  getMovies,
-  createMovie,
-  updateMovie,
-  deleteMovie,
-} from "../service/api/firestoreCrud";
+import { navItems, profileData, cards, footerData } from "../data/movieData";
+import { getMovies } from "../service/api/firestoreCrud";
 
 function Index() {
   const navigate = useNavigate();
@@ -30,7 +24,6 @@ function Index() {
   useEffect(() => {
     const adminStatus = localStorage.getItem("isAdmin") === "true";
     setIsAdmin(adminStatus);
-
     const fetchAllMovies = async () => {
       try {
         setLoading(true);
@@ -146,7 +139,7 @@ function Index() {
             </h2>
             <div className="w-full overflow-hidden">
               <CardSlider
-                cards={trending}
+                cards={cards} // Menggunakan data statis cards
                 showBadges={true}
                 isContinueWatching={true}
                 initialVisibleCards={4}
